@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attendant e-Pass</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:#fff;font-size:14px;color:#000}
+.card{max-width:480px;margin:5px auto;min-height:calc(100vh - 10px);padding:8px 18px 16px;border-radius:24px 24px 0 0;background:linear-gradient(160deg,#d9553d 0%,#e7a094 55%,#fbe9e5 100%)}
+@media(max-width:480px){.card{margin:0;border-radius:0;min-height:100vh}}
+.top{display:flex;justify-content:space-between;align-items:flex-start;padding-top:8px}
+.top b{color:#fff;font-size:13px;margin-top:24px}
+.logo{background:#fff;border-radius:14px;width:118px;height:52px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:15px;color:#555;letter-spacing:.5px}
+.circle{width:200px;height:200px;border-radius:50%;margin:-6px auto 14px;background:#fff;border:4px solid #fde3de;overflow:hidden;position:relative}
+.circle video,.circle img{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+.circle img{transform:none}
+input[type=text],input[type=tel]{width:100%;height:46px;margin-bottom:8px;padding:0 10px;font-size:15px;border:1px solid #ccc;border-radius:8px;background:#fff}
+input:focus{outline:2px solid #0d5cab;border-color:#0d5cab}
+.consent{display:flex;gap:8px;align-items:flex-start;margin:6px 0 14px;color:#fff;opacity:.85;font-size:13px;line-height:1.5}
+.consent input{margin-top:3px;width:14px;height:14px;flex:none}
+.btns{display:flex;gap:8px}
+button{font:inherit;font-weight:600;font-size:16px;color:#fff;border:0;cursor:pointer}
+.main{flex:1;height:48px;border-radius:24px;background:#0d5cab}
+#capture{display:block;width:100%;height:48px;border-radius:24px;background:#5f9ea0}
+#capture.hide{display:none}
+.box{background:#fff;border-radius:16px;padding:12px 10px;margin-top:12px;line-height:23.5px;opacity:.97}
+.box .row{display:flex;justify-content:space-between}
+.box .row span{flex:1}
+h3{color:#0d5cab;text-align:center;font-size:16px;font-weight:600;padding-bottom:4px;border-bottom:1px solid #ddd}
+.v{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;text-align:center;padding:10px 0;border-bottom:1px solid #ddd}
+.v:last-child{border:0}
+.rm{background:#dc3545;font-size:15px;font-weight:400;padding:8px 10px;border-radius:4px;justify-self:end;margin-right:10px}
+#msg{color:#fff;background:rgba(0,0,0,.35);border-radius:8px;padding:6px 10px;margin-bottom:8px;display:none;font-size:13px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <b>Attendent e-Pass</b>
+    <div class="logo"><svg width="22" height="22" viewBox="0 0 22 22"><path fill="#f4a79b" d="M8 0h6v8h8v6h-8v8H8v-8H0V8h8z"/></svg>medanta</div>
+  </div>
+  <div class="circle" id="circle"><video id="vid" autoplay playsinline muted></video><img id="shot" class="hide" alt=""></div>
+
+  <div id="msg"></div>
+  <input type="tel" id="mob" placeholder="Mobile Number" maxlength="10" inputmode="numeric" autocomplete="off">
+  <input type="text" id="name" placeholder="Visitor Name" autocomplete="off">
+  <label class="consent"><input type="checkbox" id="ok" checked><span>I/We hereby voluntarily consent to the collection, capture, processing, storage, and use of my facial image/facial data for the purpose of visitor identification by Medanta Hospital, Gurgaon.</span></label>
+
+  <button id="capture">Capture</button>
+  <div class="btns hide" id="rs"><button class="main" id="retake">Retake</button><button class="main" id="save">Save</button></div>
+
+  <div class="box">
+    <div><b>UHID :</b>MM01715675</div>
+    <div><b>Patient :</b>Mr. Anil Kumar Bhargava</div>
+    <div><b>Pass Type :</b>Attendant</div>
+    <div><b>Area :</b>9th Floor A2A3</div>
+    <div><b>Doctor :</b>RAVI</div>
+    <div><b>Child Permission :</b>NO</div>
+    <div><b>Food Permission :</b>NO</div>
+    <div class="row"><span><b>Room :</b> 5912</span><span><b>Allowed :</b> 1</span></div>
+    <div><b>Visit Time :</b>|| 00:00 - 23:59</div>
+  </div>
+
+  <div class="box" style="margin-top:12px;padding:12px 10px 4px">
+    <h3>Attendant Registration</h3>
+    <div id="list"></div>
+  </div>
+  <p style="text-align:center;color:#fff;font-size:12px;margin-top:14px;opacity:.85">Demo only – not an official Medanta pass</p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEY="attendants";
+let stream,list=[];
+try{list=JSON.parse(localStorage.getItem(KEY))||[]}catch(e){}
+if(!list.length)list=[{n:"Shashi lata bhargava",a:0},{n:"Ankit",a:0}];
+
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(list))}catch(e){}}
+function render(){
+  $("list").innerHTML=list.map((v,i)=>`<div class="v"><span>${esc(v.n)}</span><span>Inactive</span><button class="rm" data-i="${i}">Remove</button></div>`).join("");
+}
+function msg(t){const m=$("msg");m.textContent=t;m.style.display=t?"block":"none"}
+
+async function startCam(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false});
+    $("vid").srcObject=stream;
+  }catch(e){msg("Camera not available. Please allow camera access.")}
+}
+function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
+
+function ready(){
+  if(!/^\d{10}$/.test($("mob").value)){msg("Enter a valid 10 digit mobile number");return false}
+  if(!$("name").value.trim()){msg("Enter visitor name");return false}
+  if(!$("ok").checked){msg("Consent is required");return false}
+  msg("");return true;
+}
+
+$("capture").onclick=()=>{
+  if(!ready())return;
+  const v=$("vid");
+  if(!stream||!v.videoWidth){msg("Camera not ready");return}
+  const c=document.createElement("canvas"),s=Math.min(v.videoWidth,v.videoHeight);
+  c.width=c.height=240;
+  c.getContext("2d").drawImage(v,(v.videoWidth-s)/2,(v.videoHeight-s)/2,s,s,0,0,240,240);
+  $("shot").src=c.toDataURL("image/jpeg",.7);
+  $("shot").classList.remove("hide");v.classList.add("hide");
+  $("capture").classList.add("hide");$("rs").classList.remove("hide");
+};
+function reset(){
+  $("shot").classList.add("hide");$("vid").classList.remove("hide");
+  $("rs").classList.add("hide");$("capture").classList.remove("hide");
+}
+$("retake").onclick=reset;
+$("save").onclick=()=>{
+  list.push({n:$("name").value.trim(),m:$("mob").value,a:0});
+  persist();render();
+  $("mob").value="";$("name").value="";
+  reset();
+};
+$("list").onclick=e=>{
+  const i=e.target.dataset.i;
+  if(i!==undefined){list.splice(i,1);persist();render()}
+};
+$("mob").oninput=e=>e.target.value=e.target.value.replace(/\D/g,"");
+
+render();startCam();
+</script>
+</body>
+</html>
